@@ -175,10 +175,9 @@ Wear OS 7, round 454×454 screen). The following were confirmed by inspecting th
   session appears in the local history with its own status.
 - History persists the session across an app restart.
 
-Not verified on the emulator: the final inline **VOLVER** button in the summary screen was added in
-the last commit and compiles and passes the test suite, but the change came after the last visual
-pass, so it was not re-confirmed on screen. Vibration was not verified in the emulator because the
-emulator has no meaningful haptics.
+Not verified on the emulator: vibration, because the emulator has no meaningful haptics. The
+summary screen's inline **VOLVER** action and its metric panel were confirmed to render without
+overlap on the round screen.
 
 ## Known limitations
 
