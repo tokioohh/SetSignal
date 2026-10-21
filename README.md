@@ -1,209 +1,234 @@
 # SetSignal
 
-SetSignal is a standalone Wear OS workout timer built around one job: finish the set, start the
-rest, and get back to the next set without fumbling with a phone. It is a local-first MVP with
-three example routines, a real timestamp-driven rest timer, session summaries, and persistent
-history.
+SetSignal es un cronómetro de entrenamiento independiente para Wear OS con un solo trabajo:
+terminar la serie, iniciar el descanso y volver a la siguiente serie sin tener que sacar el
+teléfono. Es un MVP local-first con tres rutinas de ejemplo, un temporizador de descanso real basado
+en marcas de tiempo, resúmenes de sesión e historial persistente.
 
-The app is intentionally small. There is no phone companion, account, cloud sync, internet access,
-health-platform integration, sensor input, AI, or fabricated recovery/calorie metric. All data stays
-on the watch.
+La aplicación es intencionalmente pequeña. No hay aplicación acompañante en el teléfono, cuentas,
+sincronización en la nube, acceso a internet, integración con plataformas de salud, entrada de
+sensores, IA ni métricas de recuperación/calorías inventadas. Todos los datos permanecen en el
+reloj.
 
-> The included routines are configuration examples, not medical advice or a personalised training
-> plan. Adjust the effort to your level and consult a professional if needed.
+> Las rutinas incluidas son ejemplos de configuración, no consejo médico ni un plan de
+> entrenamiento personalizado. Ajusta el esfuerzo a tu nivel y consulta a un profesional si lo
+> necesitas.
 
-## What it does
+## Qué hace
 
-- **Three built-in routines** – full-body strength, interval training, and gentle calisthenics.
-- **Live set workflow** – mark a set done, auto-advance to the next set/exercise, and finish the
-  session on the final set.
-- **Rest countdown from timestamps** – remaining time is derived from a monotonic clock deadline,
-  not from decrementing UI state. Pausing freezes both workout time and rest time.
-- **Rest controls** – add the configured extra time, skip the rest, or continue after the countdown
-  reaches zero. A vibration fires when the rest completes while the app process is running.
-- **Pause/resume and safe cancel** – pausing is available during exercise and rest; cancelling asks
-  for confirmation and saves the work completed so far as a cancelled session.
-- **Session summary** – distinguishes completed and cancelled sessions and shows active time,
-  completed sets/exercises, rest used, and per-exercise results.
-- **Local history** – completed and cancelled sessions survive app restarts and can be cleared with
-  a second confirmation.
-- **Persistent preferences** – default rest, extra-rest duration, and haptics are stored in
-  DataStore.
-- **Watch-first UI** – dark AMOLED palette, warm white/gray type, lime accent, large timer numerals,
-  a custom tick-mark progress ring, short transitions, and round-screen-friendly layouts.
+- **Tres rutinas integradas** – fuerza de cuerpo completo, entrenamiento por intervalos y
+  calistenia suave.
+- **Flujo de series en vivo** – marca una serie como hecha, avanza automáticamente a la
+  siguiente serie/ejercicio y termina la sesión en la última serie.
+- **Cuenta atrás de descanso basada en marcas de tiempo** – el tiempo restante se deriva de una
+  fecha límite del reloj monótono, no de un estado de UI que se decrementa. Pausar congela tanto el
+  tiempo de entrenamiento como el de descanso.
+- **Controles de descanso** – añade el tiempo extra configurado, salta el descanso o continúa
+  cuando la cuenta atrás llega a cero. Se produce una vibración cuando termina el descanso mientras
+  el proceso de la app está en ejecución.
+- **Pausa/reanudación y cancelación segura** – la pausa está disponible durante el ejercicio y el
+  descanso; cancelar pide confirmación y guarda el trabajo realizado hasta el momento como sesión
+  cancelada.
+- **Resumen de sesión** – distingue sesiones completadas y canceladas y muestra tiempo activo,
+  series/ejercicios completados, descanso usado y resultados por ejercicio.
+- **Historial local** – las sesiones completadas y canceladas sobreviven a los reinicios de la app
+  y se pueden borrar con una segunda confirmación.
+- **Preferencias persistentes** – el descanso por defecto, la duración del descanso extra y los
+  hápticos se almacenan en DataStore.
+- **UI pensada para el reloj** – paleta oscura AMOLED, texto blanco cálido/gris, acento lima,
+  números de cronómetro grandes, anillo de progreso con marcas de tick personalizado, transiciones
+  cortas y diseños aptos para pantallas redondas.
 
-## Screens and flow
+## Pantallas y flujo
 
-| Screen | Purpose |
+| Pantalla | Propósito |
 | --- | --- |
-| Home | Last session, completed-session count, history/settings shortcuts |
-| Routines | Browse the three local routines |
-| Routine detail | Review exercises, tune rest in 15-second steps, start the workout |
-| Workout overlay | Exercise, rest, rest-complete, paused, saving, and save-error states |
-| Summary | Results for a completed or cancelled session |
-| History | Session list grouped by day, with completed/cancelled totals |
-| Settings | Default rest, extra rest, haptics, clear history, app information |
+| Inicio | Última sesión, recuento de sesiones completadas, accesos a historial/ajustes |
+| Rutinas | Explorar las tres rutinas locales |
+| Detalle de rutina | Revisar ejercicios, ajustar el descanso en pasos de 15 segundos, empezar el entrenamiento |
+| Overlay de entrenamiento | Estados de ejercicio, descanso, descanso completado, pausado, guardando y error de guardado |
+| Resumen | Resultados de una sesión completada o cancelada |
+| Historial | Lista de sesiones agrupadas por día, con totales completadas/canceladas |
+| Ajustes | Descanso por defecto, descanso extra, hápticos, borrar historial, información de la app |
 
-A workout is an activity-level full-screen overlay rather than a navigation destination. Swipe-back
-cannot dismiss or lose an active session; the system back gesture opens the cancel confirmation
-instead. After the session is saved, the overlay closes and the summary opens.
+Un entrenamiento es un overlay de pantalla completa a nivel de actividad, no un destino de
+navegación. El gesto de deslizar hacia atrás no puede descartar ni perder una sesión activa; el
+gesto de retroceso del sistema abre la confirmación de cancelación. Una vez guardada la sesión, el
+overlay se cierra y se abre el resumen.
 
-## Architecture
+## Arquitectura
 
 ```
 app/src/main/java/com/example/setsignal/
 ├── data/
-│   ├── datastore/        DataStore preferences repository
-│   ├── local/            Room database, DAO, entities, relation
-│   └── repository/       Room-backed session repository
+│   ├── datastore/        Repositorio de preferencias con DataStore
+│   ├── local/            Base de datos Room, DAO, entidades, relación
+│   └── repository/       Repositorio de sesiones respaldado por Room
 ├── domain/
-│   ├── data/             Routine catalog (three local examples)
-│   ├── model/            Exercise, routine, session, and settings models
-│   ├── repository/       Repository contracts
-│   └── workout/          Pure workout state machine and result mapping
-├── feature/              Home, routines, workout, history, summary, settings ViewModels
-├── platform/             Monotonic time source and vibration adapter
-├── ui/                   Theme, reusable components, formatting, screens
-├── AppContainer.kt       Manual dependency container
+│   ├── data/             Catálogo de rutinas (tres ejemplos locales)
+│   ├── model/            Modelos de ejercicio, rutina, sesión y ajustes
+│   ├── repository/       Contratos de los repositorios
+│   └── workout/          Máquina de estados pura del entrenamiento y mapeo de resultados
+├── feature/              ViewModels de inicio, rutinas, entrenamiento, historial, resumen y ajustes
+├── platform/             Fuente de tiempo monótono y adaptador de vibración
+├── ui/                   Tema, componentes reutilizables, formato, pantallas
+├── AppContainer.kt       Contenedor manual de dependencias
 ├── SetSignalApplication.kt
-└── MainActivity.kt       Navigation host and workout overlay
+└── MainActivity.kt       Host de navegación y overlay de entrenamiento
 ```
 
-Key decisions:
+Decisiones clave:
 
-- **Pure engine first.** `WorkoutEngine` owns set/rest/pause transitions and accepts
-  `elapsedRealtime()` values from the caller. It has no Android or Compose dependency, which keeps
-  timing logic deterministic and unit-testable.
-- **Only terminal sessions are persisted.** A session is written once, after it is completed or
-  cancelled. In-progress state never enters the database, so history cannot contain partial or
-  duplicate rows.
-- **Unidirectional state.** ViewModels expose `StateFlow`; Compose screens collect with lifecycle
-  awareness. Feature ViewModels use small manual factories and `AppContainer` instead of a DI
-  framework.
-- **Data stays local.** Room stores sessions/exercises; DataStore stores preferences. The manifest
-  requests only `VIBRATE` and declares no network permission.
-- **Navigation.** Wear Compose Navigation (`SwipeDismissableNavHost`) handles the library, history,
-  settings, and summaries. The live workout deliberately sits outside that graph.
+- **Motor puro primero.** `WorkoutEngine` gestiona las transiciones de serie/descanso/pausa y
+  acepta valores de `elapsedRealtime()` proporcionados por el llamador. No tiene dependencias de
+  Android ni de Compose, lo que mantiene la lógica de tiempos determinista y testeable con unit
+  tests.
+- **Solo se persisten sesiones terminadas.** Una sesión se escribe una única vez, después de
+  completarla o cancelarla. El estado en curso nunca entra en la base de datos, así que el
+  historial no puede contener filas parciales o duplicadas.
+- **Estado unidireccional.** Los ViewModels exponen `StateFlow`; las pantallas de Compose los
+  recolectan con conciencia del ciclo de vida. Los ViewModels de funcionalidad usan fábricas
+  manuales pequeñas y `AppContainer` en lugar de un framework de inyección de dependencias.
+- **Los datos permanecen locales.** Room almacena sesiones/ejercicios; DataStore almacena
+  preferencias. El manifiesto solo solicita `VIBRATE` y no declara permiso de red.
+- **Navegación.** Wear Compose Navigation (`SwipeDismissableNavHost`) gestiona la biblioteca, el
+  historial, los ajustes y los resúmenes. El entrenamiento en vivo se sitúa deliberadamente fuera
+  de ese grafo.
 
-### Timing semantics
+### Semántica de tiempos
 
-- Elapsed workout time uses `SystemClock.elapsedRealtime()` and excludes paused intervals; rest time
-  counts as workout time.
-- Rest remaining is `restEndsAtElapsedMillis - now`, so recomposition, lifecycle changes, and
-  screen-off gaps do not accumulate drift.
-- Completing a set starts a rest or advances immediately when rest is set to zero.
-- Completing the final set finishes without a trailing rest.
-- At `REST_COMPLETE`, the engine returns exactly one transition event so the ViewModel can trigger
-  one haptic; the user then taps **SEGUIR** to continue.
+- El tiempo transcurrido de entrenamiento usa `SystemClock.elapsedRealtime()` e excluye los
+  intervalos en pausa; el tiempo de descanso cuenta como tiempo de entrenamiento.
+- El descanso restante es `restEndsAtElapsedMillis - now`, de modo que la recomposición, los
+  cambios de ciclo de vida y los periodos con pantalla apagada no acumulan desfase.
+- Completar una serie inicia un descanso o avanza inmediatamente si el descanso está a cero.
+- Completar la última serie termina sin un descanso final.
+- En `REST_COMPLETE`, el motor devuelve exactamente un evento de transición para que el ViewModel
+  pueda disparar una única háptica; después el usuario toca **SEGUIR** para continuar.
 
-## Tech stack
+## Stack tecnológico
 
-Versions are declared in `gradle/libs.versions.toml`:
+Las versiones se declaran en `gradle/libs.versions.toml`:
 
 - Kotlin 2.2.10, AGP 9.4.1, Gradle 9.6.0
-- Jetpack Compose for Wear OS 1.5.6 (Material 3 Wear, Foundation, Navigation)
+- Jetpack Compose para Wear OS 1.5.6 (Material 3 Wear, Foundation, Navigation)
 - Compose BOM 2025.06.01, Activity Compose 1.10.1
 - Lifecycle 2.9.4, Navigation Compose (Wear) 1.5.6
-- Room 2.8.5 with KSP 2.2.10-2.0.2
+- Room 2.8.5 con KSP 2.2.10-2.0.2
 - DataStore Preferences 1.2.1
 - JUnit 4.13.2, Robolectric 4.16.1, coroutines-test 1.10.2
 
-Compile/target SDK 37, min SDK 30, standalone watch app, application ID `com.example.setsignal`.
+Compile/target SDK 37, min SDK 30, app de reloj independiente, application ID `com.example.setsignal`.
 
-## Build and run
+## Compilar y ejecutar
 
-Requirements:
+Requisitos:
 
-- Android Studio with Android SDK 37
-- JDK compatible with the project's Gradle/AGP toolchain
-- A Wear OS emulator or watch running API 30+
+- Android Studio con Android SDK 37
+- JDK compatible con la cadena de herramientas Gradle/AGP del proyecto
+- Un emulador de Wear OS o un reloj con API 30+
 
-From the repository root:
+Desde la raíz del repositorio (Linux/macOS):
+
+```bash
+./gradlew :app:assembleDebug
+```
+
+En Windows:
 
 ```bat
 gradlew.bat :app:assembleDebug
 ```
 
-Install on a connected watch/emulator:
+Instalar en un reloj/emulador conectado:
 
-```bat
-gradlew.bat :app:installDebug
+```bash
+./gradlew :app:installDebug
 ```
 
-The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
+El APK de debug se genera en `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Tests and checks
+## Pruebas y comprobaciones
 
-```bat
-gradlew.bat :app:testDebugUnitTest
-gradlew.bat :app:lintDebug
-gradlew.bat :app:assembleDebug
+```bash
+./gradlew :app:testDebugUnitTest
+./gradlew :app:lintDebug
+./gradlew :app:assembleDebug
 ```
 
-Current local results:
+Resultados locales actuales:
 
-- **28 JVM unit tests pass** (workout engine, Room repository with Robolectric, DataStore
-  persistence/clamping, formatting/date helpers).
-- **`:app:lintDebug` completes with 0 errors** (15 informational warnings, mostly available
-  dependency upgrades and two manifest/backup attributes).
-- **`:app:assembleDebug` succeeds** and produces `app-debug.apk`.
+- **28 unit tests JVM pasan** (motor de entrenamiento, repositorio Room con Robolectric,
+  persistencia/límites de DataStore, helpers de formato/fechas).
+- **`:app:lintDebug` termina con 0 errores** (15 avisos informativos, en su mayoría
+  actualizaciones opcionales de dependencias y dos atributos de manifiesto/backup).
+- **`:app:assembleDebug` finaliza correctamente** y produce `app-debug.apk`.
 
-The test suite covers:
+La suite de pruebas cubre:
 
-- Rest deadlines, completion transitions, skip, zero rest, pause/resume, extra rest, cancel, and
-  result validation.
-- Completed/cancelled session round-trip, exercise ordering, newest-first history, completed count,
-  and clear-history behavior.
-- Preference defaults, validation clamping, and persistence into a reopened DataStore file.
-- Elapsed/clock/date formatting and history-day labels.
+- Plazos de descanso, transiciones de completado, salto, descanso a cero, pausa/reanudación,
+  descanso extra, cancelación y validación de resultados.
+- Round-trip de sesiones completadas/canceladas, orden de ejercicios, historial del más reciente al
+  más antiguo, recuento de completadas y borrado del historial.
+- Valores por defecto de preferencias, límites de validación y persistencia en un archivo de
+  DataStore reabierto.
+- Formato de tiempo transcurrido/reloj/fechas y etiquetas de día del historial.
 
-### Emulator verification
+### Verificación en emulador
 
-The debug build was installed and exercised on an Android Wear OS emulator (AVD `SetSignalWear`,
-Wear OS 7, round 454×454 screen). The following were confirmed by inspecting the running app:
+La build de debug se instaló y se probó en un emulador Android Wear OS (AVD `SetSignalWear`,
+Wear OS 7, pantalla redonda de 454×454). Lo siguiente se confirmó inspeccionando la app en
+ejecución:
 
-- Cold start into Home: the wordmark, tagline, and the primary **ELEGIR RUTINA** action render on
-  the first screen without scroll, clipping, or overflow.
-- Routines list: the three routine cards render with full titles and metadata.
-- Routine detail: description, metrics, and the inline **EMPEZAR** action render on the first screen.
-- Live workout: completing a set advances the set counter and the progress ring; the rest screen
-  counts down from the chosen duration, and pause/resume freezes and resumes the countdown.
-- **+15 s** adds the configured extra rest, and **SALTAR** skips the rest.
-- Finishing the final set saves the session and opens the summary, which reports the routine, date,
-  active time, and the completed-set total.
-- Cancelling asks for confirmation; confirming saves the session as cancelled, and the cancelled
-  session appears in the local history with its own status.
-- History persists the session across an app restart.
+- Arranque en frío hasta Inicio: el logotipo, el eslogan y la acción principal **ELEGIR RUTINA**
+  se renderizan en la primera pantalla sin scroll, recorte ni desbordamiento.
+- Lista de rutinas: las tres tarjetas de rutina se renderizan con títulos y metadatos completos.
+- Detalle de rutina: descripción, métricas y la acción en línea **EMPEZAR** se renderizan en la
+  primera pantalla.
+- Entrenamiento en vivo: completar una serie avanza el contador de series y el anillo de progreso;
+  la pantalla de descanso cuenta atrás desde la duración elegida, y pausar/reanudar congela y
+  reanuda la cuenta atrás.
+- **+15 s** añade el descanso extra configurado y **SALTAR** salta el descanso.
+- Terminar la última serie guarda la sesión y abre el resumen, que informa de la rutina, la fecha,
+  el tiempo activo y el total de series completadas.
+- Cancelar pide confirmación; confirmar guarda la sesión como cancelada, y la sesión cancelada
+  aparece en el historial local con su propio estado.
+- El historial conserva la sesión a través de un reinicio de la app.
 
-Not verified on the emulator: vibration, because the emulator has no meaningful haptics. The
-summary screen's inline **VOLVER** action and its metric panel were confirmed to render without
-overlap on the round screen.
+No verificado en el emulador: la vibración, porque el emulador no tiene hápticos significativos. La
+acción en línea **VOLVER** de la pantalla de resumen y su panel de métricas se confirmaron se
+renderizan sin solaparse en la pantalla redonda.
 
-## Known limitations
+## Limitaciones conocidas
 
-- **Active-session recovery is not implemented.** If Android kills the process mid-workout, the
-  in-progress set/rest state is lost. Only finished and cancelled sessions are durable.
-- **No background alarm service.** Rest completion haptics fire while the app process and its
-  coroutine ticker are alive. Screen-off behavior depends on the device/OS keeping the process
-  running; haptics are not guaranteed after process death or aggressive background restrictions.
-- **No background rest notifications.** The countdown is visible in the app; there is no system
-  notification or ongoing complication.
-- **Routines are fixed examples.** There is no routine editor, scheduling, progression, or exercise
-  library in this MVP.
-- **The UI is Spanish-only.** Strings are currently embedded in composables; there is no localized
-  resource set yet.
-- **Known visual defect in the Home "Última sesión" card.** When `SessionCard` is used in detailed
-  mode, the completed-set count and the progress ring do not fit the row: the count wraps one
-  character per line and the routine name is truncated. Routine rows, the workout overlay, and the
-  summary screen are not affected. It needs a layout fix in
-  `ui/components/SessionCards.kt` (give the metric its own line, or drop the ring in detailed
-  mode).
-- The app intentionally does not read heart rate, steps, or other sensor data and does not estimate
-  calories or recovery.
+- **No está implementada la recuperación de sesión activa.** Si Android mata el proceso a mitad de
+  un entrenamiento, se pierde el estado de serie/descanso en curso. Solo las sesiones terminadas y
+  canceladas son duraderas.
+- **No hay servicio de alarma en segundo plano.** Las hápticas de fin de descanso se disparan
+  mientras el proceso de la app y su coroutine de ticks siguen vivos. El comportamiento con la
+  pantalla apagada depende de que el sistema operativo del dispositivo mantenga el proceso en
+  ejecución; no se garantizan hápticos tras la muerte del proceso ni con restricciones agresivas en
+  segundo plano.
+- **No hay notificaciones de descanso en segundo plano.** La cuenta atrás es visible en la app; no
+  hay notificación del sistema ni complicación permanente.
+- **Las rutinas son ejemplos fijos.** No hay editor de rutinas, programación, progresión ni
+  biblioteca de ejercicios en este MVP.
+- **La UI está solo en español.** Las cadenas de texto están incrustadas actualmente en los
+  composables; todavía no hay un conjunto de recursos localizado.
+- **Defecto visual conocido en la tarjeta «Última sesión» del Inicio.** Cuando `SessionCard` se
+  usa en modo detallado, el recuento de series completadas y el anillo de progreso no caben en la
+  fila: el recuento salta un carácter por línea y el nombre de la rutina se trunca. Las filas de
+  rutinas, el overlay de entrenamiento y la pantalla de resumen no se ven afectados. Necesita una
+  corrección de maquetación en `ui/components/SessionCards.kt` (dar su propia línea a la métrica o
+  quitar el anillo en modo detallado).
+- La app intencionalmente no lee la frecuencia cardíaca, los pasos ni otros datos de sensores, y
+  no estima calorías ni recuperación.
 
-## Project configuration notes
+## Notas de configuración del proyecto
 
-- KSP and AGP 9 require `android.disallowKotlinSourceSets=false` in `gradle.properties` until KSP
-  adopts AGP's built-in Kotlin source-set DSL.
-- Room schemas are exported to `app/schemas/` through the KSP `room.schemaLocation` argument.
-- Backups are disabled (`android:allowBackup="false"`); history is local to the installed watch app.
+- KSP y AGP 9 requieren `android.disallowKotlinSourceSets=false` en `gradle.properties` hasta que
+  KSP adopte el DSL de source sets integrado de AGP.
+- Los esquemas de Room se exportan a `app/schemas/` mediante el argumento `room.schemaLocation` de
+  KSP.
+- Las copias de seguridad están desactivadas (`android:allowBackup="false"`); el historial es
+  local a la app instalada en el reloj.
